@@ -19,7 +19,7 @@ A lightweight Swift framework for video export that makes customizing aspect rat
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/ExportKit.git", from: "1.0.0")
+    .package(url: "https://github.com/yourusername/ExportKit.git", from: "0.1.0")
 ]
 ```
 
