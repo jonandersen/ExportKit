@@ -5,7 +5,7 @@ public enum AspectRatio: CaseIterable, Equatable {
     case landscape
     case square
     
-    var ratio: CGFloat {
+    public var ratio: CGFloat {
         switch self {
         case .portrait: return 9/16.0
         case .landscape: return 16/9.0
@@ -13,7 +13,7 @@ public enum AspectRatio: CaseIterable, Equatable {
         }
     }
     
-    static func from(size: CGSize) -> AspectRatio {
+    public static func from(size: CGSize) -> AspectRatio {
         return if size.width > size.height {
             .landscape
         } else if size.height > size.width {
@@ -23,7 +23,7 @@ public enum AspectRatio: CaseIterable, Equatable {
         }
     }
     
-    func rotate(by rotation: Rotation) -> AspectRatio {
+    public func rotate(by rotation: Rotation) -> AspectRatio {
         return switch rotation {
         case .zero, .oneEighty:
             self
