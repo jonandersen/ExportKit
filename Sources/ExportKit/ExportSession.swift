@@ -76,6 +76,23 @@ public struct ExportSession {
             throw ExportError.failedToCreateComposition
         }
 
+        // Add Audio Tracks
+        let sourceAudioTracks = try await avAsset.loadTracks(withMediaType: .audio)
+        for sourceAudioTrack in sourceAudioTracks {
+            if let compositionAudioTrack = composition.addMutableTrack(
+                withMediaType: .audio, 
+                preferredTrackID: kCMPersistentTrackID_Invalid) 
+            {
+                do {
+                    let trackTimeRange = try await sourceAudioTrack.load(.timeRange)
+                    try compositionAudioTrack.insertTimeRange(trackTimeRange, of: sourceAudioTrack, at: .zero)
+                } catch {
+                    // Log or handle error adding specific audio track, but continue if possible
+                    print("Warning: Could not add audio track \(sourceAudioTrack.trackID): \(error.localizedDescription)")
+                }
+            }
+        }
+
         // Load necessary track properties concurrently
         let (timeRange, naturalSize, minFrameDuration, sourcePreferredTransform) = try await sourceVideoTrack.load(.timeRange, .naturalSize, .minFrameDuration, .preferredTransform)
 
