@@ -86,34 +86,14 @@ public struct ExportSession {
             throw ExportError.failedToCreateComposition
         }
 
-        // Add Audio Tracks
-        let sourceAudioTracks = try await avAsset.loadTracks(withMediaType: .audio)
-        for sourceAudioTrack in sourceAudioTracks {
-            if let compositionAudioTrack = composition.addMutableTrack(
-                withMediaType: .audio, 
-                preferredTrackID: kCMPersistentTrackID_Invalid) 
-            {
-                do {
-                    // Use the trim range if specified, otherwise use the full track duration
-                    let audioTimeRange = try await sourceAudioTrack.load(.timeRange)
-                    let timeRangeToInsert = trimRange ?? audioTimeRange
-                    try compositionAudioTrack.insertTimeRange(timeRangeToInsert, of: sourceAudioTrack, at: .zero)
-                } catch {
-                    // Log or handle error adding specific audio track, but continue if possible
-                    print("Warning: Could not add audio track \(sourceAudioTrack.trackID): \(error.localizedDescription)")
-                }
-            }
-        }
-
         // Load necessary track properties concurrently
         let (timeRange, naturalSize, minFrameDuration, sourcePreferredTransform) = try await sourceVideoTrack.load(.timeRange, .naturalSize, .minFrameDuration, .preferredTransform)
 
         // Use the original frame duration if valid, otherwise default to 30fps
         let frameDuration = (minFrameDuration.isValid && minFrameDuration.seconds > 0) ? minFrameDuration : CMTime(value: 1, timescale: 30)
         
-        // Use the trim range if specified, otherwise use the full track duration
-        let videoTimeRangeToInsert = trimRange ?? timeRange
-        try compositionVideoTrack.insertTimeRange(videoTimeRangeToInsert, of: sourceVideoTrack, at: .zero)
+        // Ensure the track gets inserted correctly using its original time range
+        try compositionVideoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
 
         // 5. Create Video Composition
         let videoComposition = AVMutableVideoComposition()
@@ -126,7 +106,7 @@ public struct ExportSession {
 
         // 7. Create Instructions
         let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = videoTimeRangeToInsert // Use the same time range as inserted
+        instruction.timeRange = timeRange // Use the original full time range for the instruction
 
         let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionVideoTrack)
 
@@ -142,12 +122,35 @@ public struct ExportSession {
 
         instruction.layerInstructions = [layerInstruction]
         videoComposition.instructions = [instruction]
+        
+        // Add Audio Tracks
+        let sourceAudioTracks = try await avAsset.loadTracks(withMediaType: .audio)
+        for sourceAudioTrack in sourceAudioTracks {
+            if let compositionAudioTrack = composition.addMutableTrack(
+                withMediaType: .audio,
+                preferredTrackID: kCMPersistentTrackID_Invalid)
+            {
+                do {
+                    // Use the original track time range for insertion
+                    let audioTimeRange = try await sourceAudioTrack.load(.timeRange)
+                    try compositionAudioTrack.insertTimeRange(audioTimeRange, of: sourceAudioTrack, at: .zero)
+                } catch {
+                    // Log or handle error adding specific audio track, but continue if possible
+                    print("Warning: Could not add audio track \(sourceAudioTrack.trackID): \(error.localizedDescription)")
+                }
+            }
+        }
 
         // 9. Create Export Session
         guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
             throw ExportError.failedToCreateExportSession
         }
         exportSession.videoComposition = videoComposition
+
+        // Apply trim range directly to the export session if it exists
+        if let trimRange = self.trimRange {
+            exportSession.timeRange = trimRange
+        }
 
         // 10. Monitor Progress (if handler provided)
         let progressTask: Task<Void, Never>?
