@@ -56,7 +56,7 @@ public struct ExportSession {
         newSession.progressHandler = handler
         return newSession
     }
-    
+
     public func trim(start: Double, duration: Double) -> Self {
         var newSession = self
         let startTime = CMTime(seconds: start, preferredTimescale: 600) // Use a common timescale like 600
@@ -64,7 +64,6 @@ public struct ExportSession {
         newSession.trimRange = CMTimeRange(start: startTime, duration: durationTime)
         return newSession
     }
-
 
     public func export(asset avAsset: AVAsset) async throws -> URL {
         // 1. Create unique output URL
@@ -86,12 +85,22 @@ public struct ExportSession {
             throw ExportError.failedToCreateComposition
         }
 
-        // Load necessary track properties concurrently
-        let (timeRange, naturalSize, minFrameDuration, sourcePreferredTransform) = try await sourceVideoTrack.load(.timeRange, .naturalSize, .minFrameDuration, .preferredTransform)
+        // Load timeRange, naturalSize, nominalFrameRate, minFrameDuration, and preferredTransform
+        let (timeRange, naturalSize, nominalFrameRate, minFrameDuration, sourcePreferredTransform) = try await sourceVideoTrack.load(.timeRange, .naturalSize, .nominalFrameRate, .minFrameDuration, .preferredTransform)
 
-        // Use the original frame duration if valid, otherwise default to 30fps
-        let frameDuration = (minFrameDuration.isValid && minFrameDuration.seconds > 0) ? minFrameDuration : CMTime(value: 1, timescale: 30)
-        
+        // Determine the best frame duration:
+        // 1. Use nominalFrameRate if valid (> 0)
+        // 2. Fallback to minFrameDuration if valid and positive
+        // 3. Default to 30fps if neither is valid
+        let frameDuration: CMTime
+        if nominalFrameRate > 0 {
+            frameDuration = CMTime(value: 1, timescale: CMTimeScale(nominalFrameRate))
+        } else if minFrameDuration.isValid && minFrameDuration.seconds > 0 {
+            frameDuration = minFrameDuration
+        } else {
+            frameDuration = CMTime(value: 1, timescale: 30) // Default to 30 FPS
+        }
+
         // Ensure the track gets inserted correctly using its original time range
         try compositionVideoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
 
