@@ -29,6 +29,7 @@ public struct ExportSession {
     private var rotation: Rotation = .zero            // Default rotation
     private var offset: CGSize = .zero               // Default offset
     private var progressHandler: (@MainActor @Sendable (Double) -> Void)? = nil
+    private var trimRange: CMTimeRange?
 
     public init() {}
 
@@ -55,6 +56,15 @@ public struct ExportSession {
         newSession.progressHandler = handler
         return newSession
     }
+    
+    public func trim(start: Double, duration: Double) -> Self {
+        var newSession = self
+        let startTime = CMTime(seconds: start, preferredTimescale: 600) // Use a common timescale like 600
+        let durationTime = CMTime(seconds: duration, preferredTimescale: 600)
+        newSession.trimRange = CMTimeRange(start: startTime, duration: durationTime)
+        return newSession
+    }
+
 
     public func export(asset avAsset: AVAsset) async throws -> URL {
         // 1. Create unique output URL
@@ -84,8 +94,10 @@ public struct ExportSession {
                 preferredTrackID: kCMPersistentTrackID_Invalid) 
             {
                 do {
-                    let trackTimeRange = try await sourceAudioTrack.load(.timeRange)
-                    try compositionAudioTrack.insertTimeRange(trackTimeRange, of: sourceAudioTrack, at: .zero)
+                    // Use the trim range if specified, otherwise use the full track duration
+                    let audioTimeRange = try await sourceAudioTrack.load(.timeRange)
+                    let timeRangeToInsert = trimRange ?? audioTimeRange
+                    try compositionAudioTrack.insertTimeRange(timeRangeToInsert, of: sourceAudioTrack, at: .zero)
                 } catch {
                     // Log or handle error adding specific audio track, but continue if possible
                     print("Warning: Could not add audio track \(sourceAudioTrack.trackID): \(error.localizedDescription)")
@@ -99,8 +111,9 @@ public struct ExportSession {
         // Use the original frame duration if valid, otherwise default to 30fps
         let frameDuration = (minFrameDuration.isValid && minFrameDuration.seconds > 0) ? minFrameDuration : CMTime(value: 1, timescale: 30)
         
-        // Ensure the track gets inserted correctly
-        try compositionVideoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
+        // Use the trim range if specified, otherwise use the full track duration
+        let videoTimeRangeToInsert = trimRange ?? timeRange
+        try compositionVideoTrack.insertTimeRange(videoTimeRangeToInsert, of: sourceVideoTrack, at: .zero)
 
         // 5. Create Video Composition
         let videoComposition = AVMutableVideoComposition()
@@ -113,7 +126,7 @@ public struct ExportSession {
 
         // 7. Create Instructions
         let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = timeRange
+        instruction.timeRange = videoTimeRangeToInsert // Use the same time range as inserted
 
         let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionVideoTrack)
 
