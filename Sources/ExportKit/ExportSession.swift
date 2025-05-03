@@ -142,8 +142,9 @@ public struct ExportSession {
             {
                 do {
                     // Use the original track time range for insertion
-                    let audioTimeRange = try await sourceAudioTrack.load(.timeRange)
+                    let (isEnabled, audioTimeRange) = try await sourceAudioTrack.load(.isEnabled,.timeRange)
                     try compositionAudioTrack.insertTimeRange(audioTimeRange, of: sourceAudioTrack, at: .zero)
+                    compositionAudioTrack.isEnabled = isEnabled
                 } catch {
                     // Log or handle error adding specific audio track, but continue if possible
                     print("Warning: Could not add audio track \(sourceAudioTrack.trackID): \(error.localizedDescription)")
