@@ -94,7 +94,8 @@ public struct ExportSession {
         // 3. Default to 30fps if neither is valid
         let frameDuration: CMTime
         if nominalFrameRate > 0 {
-            frameDuration = CMTime(value: 1, timescale: CMTimeScale(nominalFrameRate))
+            frameDuration = CMTimeMakeWithSeconds(1.0 / Double(nominalFrameRate), 
+                                                      preferredTimescale: 600)
         } else if minFrameDuration.isValid && minFrameDuration.seconds > 0 {
             frameDuration = minFrameDuration
         } else {
