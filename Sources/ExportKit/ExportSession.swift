@@ -88,8 +88,10 @@ public struct ExportSession {
         // Load timeRange, naturalSize, nominalFrameRate, minFrameDuration, and preferredTransform
         let (timeRange, naturalSizeNotTransformed, nominalFrameRate, minFrameDuration, sourcePreferredTransform) = try await sourceVideoTrack.load(.timeRange, .naturalSize, .nominalFrameRate, .minFrameDuration, .preferredTransform)
 
-        // Apply the transform to get the correctly oriented size
-        let naturalSize = naturalSizeNotTransformed.applying(sourcePreferredTransform)
+        // Apply the transform to get the correctly oriented size and ensure dimensions are positive
+        let transformedSize = naturalSizeNotTransformed.applying(sourcePreferredTransform)
+        let naturalSize = CGSize(width: abs(transformedSize.width), height: abs(transformedSize.height))
+
         // Determine the best frame duration:
         // 1. Use nominalFrameRate if valid (> 0)
         // 2. Fallback to minFrameDuration if valid and positive
