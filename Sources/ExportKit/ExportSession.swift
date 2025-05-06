@@ -30,6 +30,7 @@ public struct ExportSession {
     private var offset: CGSize = .zero               // Default offset
     private var progressHandler: (@MainActor @Sendable (Double) -> Void)? = nil
     private var trimRange: CMTimeRange?
+    private var metadataItems: [AVMetadataItem] = []
 
     public init() {}
 
@@ -54,6 +55,12 @@ public struct ExportSession {
     public func progressHandler(_ handler: (@MainActor @Sendable (Double) -> Void)?) -> Self {
         var newSession = self
         newSession.progressHandler = handler
+        return newSession
+    }
+
+    public func metadata(_ items: [AVMetadataItem]) -> Self {
+        var newSession = self
+        newSession.metadataItems = items
         return newSession
     }
 
@@ -166,6 +173,10 @@ public struct ExportSession {
         if let trimRange = self.trimRange {
             exportSession.timeRange = trimRange
         }
+
+        // Combine existing metadata with new metadata
+        let existingMetadata = try await avAsset.load(.metadata)
+        exportSession.metadata = existingMetadata + metadataItems
 
         // 10. Monitor Progress (if handler provided)
         let progressTask: Task<Void, Never>?
