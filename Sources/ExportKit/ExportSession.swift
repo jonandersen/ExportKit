@@ -28,7 +28,7 @@ public struct ExportSession {
     private var aspectRatio: AspectRatio? = nil
     private var rotation: Rotation = .zero            // Default rotation
     private var offset: CGSize = .zero               // Default offset
-    private var progressHandler: (@Sendable (Double) -> Void)? = nil
+    private var progressHandler: (@MainActor @Sendable (Double) -> Void)? = nil
     private var trimRange: CMTimeRange?
     private var metadataItems: [AVMetadataItem] = []
     
@@ -52,7 +52,7 @@ public struct ExportSession {
         return newSession
     }
 
-    public func progressHandler(_ handler: (@Sendable (Double) -> Void)?) -> Self {
+    public func progressHandler(_ handler: (@MainActor @Sendable (Double) -> Void)?) -> Self {
         var newSession = self
         newSession.progressHandler = handler
         return newSession
@@ -81,7 +81,7 @@ public struct ExportSession {
         let aspectRatio: AspectRatio?
         let rotation: Rotation
         let offset: CGSize
-        let progressHandler: (@Sendable (Double) -> Void)?
+        let progressHandler: (@MainActor @Sendable (Double) -> Void)?
         let trimRange: CMTimeRange?
         let metadataItems: [AVMetadataItem]
         let asset: AVAsset
@@ -200,7 +200,7 @@ public struct ExportSession {
                 progressTask = Task { @Sendable in
                      for await state in states {
                         if case .exporting(let progress) = state {
-                            progressHandler(Double(progress.fractionCompleted))
+                            await progressHandler(Double(progress.fractionCompleted))
                         }
                     }
                 }
@@ -212,7 +212,7 @@ public struct ExportSession {
             do {
                 try await exportSession.export(to: outputURL, as: .mp4)
                 progressTask?.cancel() // Ensure progress task is cancelled on completion
-                progressHandler?(1.0) // Signal completion
+                await progressHandler?(1.0) // Signal completion
             } catch {
                 progressTask?.cancel() // Ensure progress task is cancelled on error
                 throw ExportError.exportFailed(error)
