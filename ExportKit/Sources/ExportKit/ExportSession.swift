@@ -1,10 +1,9 @@
-import Foundation
 @preconcurrency import AVFoundation
 import CoreGraphics
+import Foundation
 import SwiftUI
 
 public struct ExportSession {
-
     enum ExportError: Error, LocalizedError {
         case failedToCreateComposition
         case failedToCreateExportSession
@@ -17,7 +16,7 @@ public struct ExportSession {
                 return "Failed to create video composition for export."
             case .failedToCreateExportSession:
                 return "Failed to create export session."
-            case .exportFailed(let underlyingError):
+            case let .exportFailed(underlyingError):
                 return "Video export failed: \(underlyingError?.localizedDescription ?? "Unknown reason")"
             case .invalidAsset:
                 return "The provided AVAsset is invalid or could not load tracks."
@@ -25,13 +24,13 @@ public struct ExportSession {
         }
     }
 
-    private var aspectRatio: AspectRatio? = nil
-    private var rotation: Rotation = .zero            // Default rotation
-    private var offset: CGSize = .zero               // Default offset
-    private var progressHandler: (@MainActor @Sendable (Double) -> Void)? = nil
+    private var aspectRatio: AspectRatio?
+    private var rotation: Rotation = .zero // Default rotation
+    private var offset: CGSize = .zero // Default offset
+    private var progressHandler: (@MainActor @Sendable (Double) -> Void)?
     private var trimRange: CMTimeRange?
     private var metadataItems: [AVMetadataItem] = []
-    
+
     public init() {}
 
     public func aspectRatio(_ ratio: AspectRatio) -> Self {
@@ -71,7 +70,7 @@ public struct ExportSession {
         newSession.trimRange = CMTimeRange(start: startTime, duration: durationTime)
         return newSession
     }
-    
+
     public func export(asset avAsset: AVAsset) async throws -> URL {
         return try await Export(aspectRatio: aspectRatio, rotation: rotation, offset: offset, progressHandler: progressHandler, trimRange: trimRange, metadataItems: metadataItems, asset: avAsset)
             .export()
@@ -85,7 +84,7 @@ public struct ExportSession {
         let trimRange: CMTimeRange?
         let metadataItems: [AVMetadataItem]
         let asset: AVAsset
-        
+
         func export() async throws -> URL {
             // 1. Create unique output URL
             let outputFileName = UUID().uuidString + ".mp4"
@@ -101,8 +100,10 @@ public struct ExportSession {
             // 4. Add Video Track
             guard let sourceVideoTrack = try await asset.loadTracks(withMediaType: .video).first,
                   let compositionVideoTrack = composition.addMutableTrack(
-                    withMediaType: .video,
-                    preferredTrackID: kCMPersistentTrackID_Invalid) else {
+                      withMediaType: .video,
+                      preferredTrackID: kCMPersistentTrackID_Invalid
+                  )
+            else {
                 throw ExportError.failedToCreateComposition
             }
 
@@ -120,7 +121,7 @@ public struct ExportSession {
             let frameDuration: CMTime
             if nominalFrameRate > 0 {
                 frameDuration = CMTimeMakeWithSeconds(1.0 / Double(nominalFrameRate),
-                                                          preferredTimescale: 600)
+                                                      preferredTimescale: 600)
             } else if minFrameDuration.isValid && minFrameDuration.seconds > 0 {
                 frameDuration = minFrameDuration
             } else {
@@ -157,17 +158,17 @@ public struct ExportSession {
 
             instruction.layerInstructions = [layerInstruction]
             videoComposition.instructions = [instruction]
-            
+
             // Add Audio Tracks
             let sourceAudioTracks = try await asset.loadTracks(withMediaType: .audio)
             for sourceAudioTrack in sourceAudioTracks {
                 if let compositionAudioTrack = composition.addMutableTrack(
                     withMediaType: .audio,
-                    preferredTrackID: kCMPersistentTrackID_Invalid)
-                {
+                    preferredTrackID: kCMPersistentTrackID_Invalid
+                ) {
                     do {
                         // Use the original track time range for insertion
-                        let (isEnabled, audioTimeRange) = try await sourceAudioTrack.load(.isEnabled,.timeRange)
+                        let (isEnabled, audioTimeRange) = try await sourceAudioTrack.load(.isEnabled, .timeRange)
                         try compositionAudioTrack.insertTimeRange(audioTimeRange, of: sourceAudioTrack, at: .zero)
                         compositionAudioTrack.isEnabled = isEnabled
                     } catch {
@@ -184,22 +185,21 @@ public struct ExportSession {
             exportSession.videoComposition = videoComposition
 
             // Apply trim range directly to the export session if it exists
-            if let trimRange = self.trimRange {
+            if let trimRange = trimRange {
                 exportSession.timeRange = trimRange
             }
 
             // Combine existing metadata with new metadata
             let existingMetadata = try await asset.load(.metadata)
             exportSession.metadata = existingMetadata + metadataItems
-            
 
             // 10. Monitor Progress (if handler provided)
             let progressTask: Task<Void, Never>?
             if let progressHandler {
                 let states = exportSession.states(updateInterval: 0.1)
                 progressTask = Task { @Sendable in
-                     for await state in states {
-                        if case .exporting(let progress) = state {
+                    for await state in states {
+                        if case let .exporting(progress) = state {
                             await progressHandler(Double(progress.fractionCompleted))
                         }
                     }
@@ -219,7 +219,6 @@ public struct ExportSession {
             }
 
             return outputURL
-            
         }
 
         // Calculate the actual output dimensions based on the aspect ratio while preserving original resolution

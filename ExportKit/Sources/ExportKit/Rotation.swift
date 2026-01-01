@@ -5,7 +5,7 @@ public enum Rotation {
     case ninety
     case oneEighty
     case twoSeventy
-    
+
     public var degrees: Double {
         switch self {
         case .zero: return 0
@@ -14,7 +14,7 @@ public enum Rotation {
         case .twoSeventy: return 270
         }
     }
-    
+
     public var radians: Double {
         switch self {
         case .zero: return 0

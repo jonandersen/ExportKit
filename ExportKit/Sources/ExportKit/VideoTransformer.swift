@@ -1,5 +1,5 @@
-import CoreGraphics
 import AVFoundation
+import CoreGraphics
 
 struct VideoTransformer {
     let videoSize: CGSize
