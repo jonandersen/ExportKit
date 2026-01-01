@@ -5,7 +5,7 @@ struct VideoTransformer {
     let videoSize: CGSize
     let compositionSize: CGSize
     var rotation: Rotation = .zero
-    var offset: CGSize = .zero // Represents fractional offset
+    var position: CGSize = .zero // Represents fractional offset
 
     // Initializer
     init(videoSize: CGSize, compositionSize: CGSize) {
@@ -22,7 +22,7 @@ struct VideoTransformer {
 
     func offset(by offset: CGSize) -> VideoTransformer {
         var newTransformer = self
-        newTransformer.offset = offset
+        newTransformer.position = position
         return newTransformer
     }
 
@@ -78,30 +78,27 @@ struct VideoTransformer {
         let scaleTransform = CGAffineTransform(scaleX: scaleFactor, y: scaleFactor)
         let translationTransform = CGAffineTransform(translationX: tx, y: ty)
 
-        // Convert fractional offset to points relative to composition size.
-        // Invert Y-axis assuming SwiftUI gesture Y increases upwards,
-        // while AVFoundation layer transform Y increases downwards.
-        var dragX: CGFloat
-        var dragY: CGFloat
+        // Calculate the scaled video dimensions
+        let scaledVideoWidth = rotatedVideoSize.width * scaleFactor
+        let scaledVideoHeight = rotatedVideoSize.height * scaleFactor
 
-        switch rotation {
-        case .ninety, .twoSeventy:
-            // Rotated 90/270: Drag X maps to composition height, Drag Y maps to composition width
-            dragX = offset.width * compositionSize.height * scaleFactor
-            dragY = -offset.height * compositionSize.width * scaleFactor // Invert Y
-        case .zero, .oneEighty:
-            // Rotated 0/180: Drag X maps to composition width, Drag Y maps to composition height
-            dragX = offset.width * compositionSize.width * scaleFactor
-            dragY = -offset.height * compositionSize.height * scaleFactor // Invert Y
-        }
+        // Calculate available panning range (how much the scaled video extends beyond composition)
+        let availableHorizontalPan = max(0, (scaledVideoWidth - compositionSize.width) / 2)
+        let availableVerticalPan = max(0, (scaledVideoHeight - compositionSize.height) / 2)
 
-        let dragTransform = CGAffineTransform(translationX: dragX, y: dragY)
+        // Convert normalized position [-1, +1] to actual translation
+        // -1 = top/left edge, 0 = center, +1 = bottom/right edge
+        // Invert Y-axis: SwiftUI Y increases upwards, AVFoundation Y increases downwards
+        let positionOffsetX = position.width * availableHorizontalPan
+        let positionOffsetY = -position.height * availableVerticalPan
+
+        let positionTransform = CGAffineTransform(translationX: positionOffsetX, y: positionOffsetY)
 
         // Combine transforms
         let composite = rotationTransform
             .concatenating(scaleTransform)
             .concatenating(translationTransform)
-            .concatenating(dragTransform) // Apply drag last
+            .concatenating(positionTransform) // Apply position offset last
 
         return composite
     }
