@@ -22,7 +22,7 @@ struct VideoTransformer {
 
     func offset(by offset: CGSize) -> VideoTransformer {
         var newTransformer = self
-        newTransformer.position = position
+        newTransformer.position = offset
         return newTransformer
     }
 
