@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		05A0ADF82F0580DE00D4C82C /* ExportKit in Frameworks */ = {isa = PBXBuildFile; productRef = 05A0ADF72F0580DE00D4C82C /* ExportKit */; };
+		05A0AE0D2F062D8E00D4C82C /* ExportKit in Frameworks */ = {isa = PBXBuildFile; productRef = 05A0AE0C2F062D8E00D4C82C /* ExportKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				05A0ADF82F0580DE00D4C82C /* ExportKit in Frameworks */,
+				05A0AE0D2F062D8E00D4C82C /* ExportKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			name = ExportKitDemoApp;
 			packageProductDependencies = (
 				05A0ADF72F0580DE00D4C82C /* ExportKit */,
+				05A0AE0C2F062D8E00D4C82C /* ExportKit */,
 			);
 			productName = ExportKitDemoApp;
 			productReference = 05A0ADE82F0580BC00D4C82C /* ExportKitDemoApp.app */;
@@ -101,7 +104,7 @@
 			mainGroup = 05A0ADDF2F0580BC00D4C82C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				05A0ADF62F0580DE00D4C82C /* XCLocalSwiftPackageReference "../ExportKit" */,
+				05A0AE0B2F062D8E00D4C82C /* XCLocalSwiftPackageReference "../../ExportKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 05A0ADE92F0580BC00D4C82C /* Products */;
@@ -343,14 +346,18 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		05A0ADF62F0580DE00D4C82C /* XCLocalSwiftPackageReference "../ExportKit" */ = {
+		05A0AE0B2F062D8E00D4C82C /* XCLocalSwiftPackageReference "../../ExportKit" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../ExportKit;
+			relativePath = ../../ExportKit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		05A0ADF72F0580DE00D4C82C /* ExportKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ExportKit;
+		};
+		05A0AE0C2F062D8E00D4C82C /* ExportKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ExportKit;
 		};
